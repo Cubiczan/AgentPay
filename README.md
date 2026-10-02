@@ -6,6 +6,16 @@ AgentPay-x402 implements the [x402 protocol](https://github.com/anish-agni/x402)
 
 Built on **Casper Network** with full on-chain integration: real Wasm smart contracts, Ed25519 keypairs, deploy hash verification, and on-chain balance reads. **New for the Finals round:** a Treasury Agent that uses an LLM (GLM-4.6) to autonomously decide which services each agent should call, then executes the x402 payment flow on their behalf — no human in the loop.
 
+<!-- product-screenshots:start -->
+## Product screenshots
+
+x402 marketplace interface with service registration, agent services, and the integration example.
+
+![AgentPay product interface](public/agentpay-marketplace.png)
+
+Existing UI capture stored in this repository; displayed values may be demo or sample data.
+<!-- product-screenshots:end -->
+
 ## What's new in the Finals round
 
 The Qualification-round submission was a payment API for AI agents. For the Finals, we added the agent layer:
