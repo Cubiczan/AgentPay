@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { indexService } from '@/lib/algolia-server'
 import crypto from 'crypto'
 
 export async function GET(req: NextRequest) {
@@ -63,6 +64,10 @@ export async function POST(req: NextRequest) {
         apiKey,
       },
     })
+
+    // Best-effort: keep the Algolia marketplace index in sync.
+    // Never throws and no-ops when Algolia is not configured.
+    await indexService(service)
 
     return NextResponse.json({ service }, { status: 201 })
   } catch (error) {

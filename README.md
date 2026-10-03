@@ -163,6 +163,19 @@ Single-page app with **5 tabs**:
 - **Developer Portal** — register and configure services
 - **Payment Explorer** — payment history, deploy tracking, verification
 
+### Marketplace search (Algolia)
+
+Marketplace search is powered by an Algolia `services` index (typo-tolerant,
+relevance-ranked by calls/rating, category facet) when configured; without
+Algolia env vars the page falls back to the built-in substring filter.
+
+- The DB stays the source of truth. New services are indexed on creation
+  (`POST /api/services`); backfill or re-sync anytime with
+  `bun run scripts/index-services.ts` (needs `DATABASE_URL` + write key).
+- Records contain public fields only — `apiKey` is never indexed.
+- Keys: `NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY` is the browser-safe search key;
+  `ALGOLIA_WRITE_API_KEY` is server-side only (see `.env.example`).
+
 ## The Treasury Agent in detail
 
 The Treasury Agent is what makes AgentPay an **autonomous agent system**, not just a payment API. On each cycle:

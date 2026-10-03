@@ -30,6 +30,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import { SERVICES_INDEX, recordToService, type ServiceRecord } from '@/lib/algolia';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -220,6 +222,47 @@ export default function AgentPayPage() {
   // Marketplace
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+
+  // ── Algolia marketplace search ──────────────────────────────────
+  // When NEXT_PUBLIC_ALGOLIA_* are configured, the marketplace grid is
+  // driven by Algolia (typo-tolerant, relevance-ranked, category facet).
+  // Otherwise the local substring filter below applies, exactly as before.
+  const algoliaClient = useMemo(() => {
+    const appId = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
+    const searchKey = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY;
+    return appId && searchKey ? algoliasearch(appId, searchKey) : null;
+  }, []);
+  const [algoliaServices, setAlgoliaServices] = useState<Service[] | null>(null);
+  const algoliaSeq = useRef(0);
+
+  useEffect(() => {
+    if (!algoliaClient) {
+      setAlgoliaServices(null);
+      return;
+    }
+    const seq = ++algoliaSeq.current;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await algoliaClient.search({
+          requests: [
+            {
+              indexName: SERVICES_INDEX,
+              query: search,
+              filters: 'status:active',
+              facetFilters: category !== 'All' ? [`category:${category}`] : undefined,
+              hitsPerPage: 60,
+            },
+          ],
+        });
+        if (seq !== algoliaSeq.current) return; // a newer query superseded this one
+        const hits = (res.results[0] as unknown as { hits: ServiceRecord[] }).hits;
+        setAlgoliaServices(hits.map(recordToService));
+      } catch {
+        if (seq === algoliaSeq.current) setAlgoliaServices(null); // fall back to local filter
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [algoliaClient, search, category]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [callResult, setCallResult] = useState<{ flow: X402Flow; payment: Payment } | null>(null);
   const [onChainMode, setOnChainMode] = useState(false);
@@ -407,6 +450,7 @@ export default function AgentPayPage() {
   );
 
   const filteredServices = useMemo(() => {
+    if (algoliaServices) return algoliaServices;
     let result = services;
     if (category !== 'All') {
       result = result.filter((s) => s.category === category);
@@ -421,7 +465,7 @@ export default function AgentPayPage() {
       );
     }
     return result;
-  }, [services, category, search]);
+  }, [services, category, search, algoliaServices]);
 
   const agentPayments = useMemo(
     () => payments.filter((p) => p.agentId === selectedAgentId),
